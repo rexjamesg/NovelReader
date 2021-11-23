@@ -1,0 +1,2 @@
+# NovelReader
+利用CollectionView製作可自動切頁並閱讀大量文字的閱讀器
