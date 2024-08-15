@@ -8,48 +8,6 @@
 
 import UIKit
 
-extension String {
-    /**
-     設定內文樣式
-     - Parameter content: 內容
-     - Parameter fontSize:  文字
-     */
-    func setContentStyle(fontSize:CGFloat, lineSpacing:CGFloat) -> NSAttributedString {
-        let str = self as NSString
-        let style = NSMutableParagraphStyle()
-        style.lineSpacing = lineSpacing
-        let font = UIFont.systemFont(ofSize: fontSize)
-        let attributes = [NSAttributedString.Key.paragraphStyle : style,NSAttributedString.Key.font:font]
-        let attributedText:NSAttributedString = NSAttributedString.init(string: str as String, attributes: attributes)
-        return attributedText
-    }
-}
-
-//計算TextView可視字元
-public extension UITextView {
-    var visibleRange: NSRange? {
-        if let start = closestPosition(to: contentOffset) {
-            if let end = characterRange(at: CGPoint(x: contentOffset.x + bounds.maxX, y: contentOffset.y + bounds.maxY))?.end {
-                return NSMakeRange(offset(from: beginningOfDocument, to: start), offset(from: start, to: end))
-            }
-        }
-        return nil
-    }
-    
-    /**
-     取得可視字串
-     - Parameter content: 目前陣列其中一項小說內容
-     - Returns: 整頁可視字串
-     */
-    func getVisibleText(content:String, font:CGFloat, lineSpacing:CGFloat) -> String {
-        self.attributedText = content.setContentStyle(fontSize: font, lineSpacing: lineSpacing)
-        let myNSString = content as NSString
-        let visibleRange = self.visibleRange!
-        let visibleText: String = myNSString.substring(with: visibleRange)
-        return visibleText
-    }
-}
-
 class ContentSpliter: NSObject {
 
     private var textView:UITextView = UITextView()
@@ -87,8 +45,11 @@ class ContentSpliter: NSObject {
         } while (content.length > 0)
         finished(array)
     }
-    
-    private func checkSplitResult(result:String) -> Bool {
+}
+
+//MARK: - Private Methods
+private extension ContentSpliter {
+    func checkSplitResult(result:String) -> Bool {
         let match = matches(for: "^\\s+$", in: result)
         if match.count <= 0 {
             return true
@@ -96,7 +57,7 @@ class ContentSpliter: NSObject {
         return false
     }
     
-    private func matches(for regex: String, in text: String) -> [String] {
+    func matches(for regex: String, in text: String) -> [String] {
         do {
             let regex = try NSRegularExpression(pattern: regex)
             let results = regex.matches(in: text, range: NSRange(text.startIndex..., in: text))
@@ -105,5 +66,50 @@ class ContentSpliter: NSObject {
             print("invalid regex: \(error.localizedDescription)")
             return []
         }
+    }
+}
+
+extension String {
+    /**
+     設定內文樣式
+     - Parameter content: 內容
+     - Parameter fontSize:  文字
+     */
+    func setContentStyle(fontSize:CGFloat, lineSpacing:CGFloat) -> NSAttributedString {
+        let str = self as NSString
+        let style = NSMutableParagraphStyle()
+        style.lineSpacing = lineSpacing
+        let font = UIFont.systemFont(ofSize: fontSize)
+        let attributes = [NSAttributedString.Key.paragraphStyle : style,NSAttributedString.Key.font:font]
+        let attributedText:NSAttributedString = NSAttributedString.init(string: str as String, attributes: attributes)
+        return attributedText
+    }
+}
+
+//計算TextView可視字元
+extension UITextView {
+    var visibleRange: NSRange? {
+        if let start = closestPosition(to: contentOffset) {
+            if let end = characterRange(at: CGPoint(x: contentOffset.x + bounds.maxX, y: contentOffset.y + bounds.maxY))?.end {
+                return NSMakeRange(offset(from: beginningOfDocument, to: start), offset(from: start, to: end))
+            }
+        }
+        return nil
+    }
+    
+    /**
+     取得可視字串
+     - Parameter content: 目前陣列其中一項小說內容
+     - Returns: 整頁可視字串
+     */
+    func getVisibleText(content:String, font:CGFloat, lineSpacing:CGFloat) -> String {
+        self.attributedText = content.setContentStyle(fontSize: font, lineSpacing: lineSpacing)
+        let myNSString = content as NSString
+        if let visibleRange = self.visibleRange {
+            let visibleText: String = myNSString.substring(with: visibleRange)
+            return visibleText
+        }
+        
+        return ""
     }
 }

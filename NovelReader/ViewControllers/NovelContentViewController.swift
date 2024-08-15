@@ -8,20 +8,20 @@
 
 import UIKit
 
-class NovelContentViewController: UIViewController, UICollectionViewDelegate, UICollectionViewDataSource, UIScrollViewDelegate {
+class NovelContentViewController: UIViewController, UIScrollViewDelegate {
     
     override var prefersStatusBarHidden: Bool {
         return true
     }
     
-    var contentCollectionView:UICollectionView?
-    private var cellSize:CGSize = CGSize.zero
-    ///預先載入
-    var preloadLimit:Int = 3
-    
     var visibleTextAreaSize:CGSize {
         return CGSize.init(width: cellSize.width-30, height: cellSize.height-20)
     }
+    
+    var contentCollectionView:UICollectionView?
+    var cellSize:CGSize = CGSize.zero
+    ///預先載入
+    var preloadLimit:Int = 3
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -66,21 +66,6 @@ class NovelContentViewController: UIViewController, UICollectionViewDelegate, UI
             contentCollectionView?.register(nib, forCellWithReuseIdentifier: identifier)
         }
     }
-
-    //MARK: - UICollectionViewDelegate
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return 0
-    }
-    
-    //MARK: - UICollectionViewDataSource
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "Cell", for: indexPath)
-        return cell
-    }
-    
-    func collectionView(_ collectionView: UICollectionView, didEndDisplaying cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
-        
-    }
     
     ///檢查目前的Cell數量是否能夠繼續讀取下一頁
     func isNextPageAvailable(_ collectionView: UICollectionView, didEndDisplaying cell: UICollectionViewCell, forItemAt indexPath: IndexPath) -> Bool {
@@ -120,7 +105,8 @@ class NovelContentViewController: UIViewController, UICollectionViewDelegate, UI
     
     ///刷新網格列表
     func reloadData(finished: (()->Void)?=nil) {
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
             self.contentCollectionView?.reloadData()
             if finished != nil {
                 finished!()
@@ -196,13 +182,13 @@ class NovelContentViewController: UIViewController, UICollectionViewDelegate, UI
         let page = lround(Double(offset/baseSize))
         
         if page >= 0 {
-            setPageIndex(currentPage: Int(page))
+            didScrollPage(currentPage: Int(page))
         } else {
-            setPageIndex(currentPage: 0)
+            didScrollPage(currentPage: 0)
         }
     }
     
-    func setPageIndex(currentPage:Int) {
+    func didScrollPage(currentPage:Int) {
         
     }
     
@@ -225,4 +211,20 @@ class NovelContentViewController: UIViewController, UICollectionViewDelegate, UI
     }
     */
 
+}
+
+extension NovelContentViewController: UICollectionViewDelegate, UICollectionViewDataSource {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return 0
+    }
+    
+    //MARK: - UICollectionViewDataSource
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "Cell", for: indexPath)
+        return cell
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, didEndDisplaying cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        
+    }
 }
