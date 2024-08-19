@@ -8,6 +8,9 @@
 
 import UIKit
 
+//TODO:
+//  往右滑動預先讀取下一頁
+
 // MARK: - ReadNovelViewController
 
 class ReadNovelViewController: NovelContentViewController {
@@ -22,13 +25,14 @@ class ReadNovelViewController: NovelContentViewController {
         if let statusBarManager = view.window?.windowScene?.statusBarManager {
             return statusBarManager.statusBarFrame.height
         } else {
+            //return view.window?.windowScene?.statusBarManager?.statusBarFrame.height ?? 0
             return UIApplication.shared.statusBarFrame.height
         }
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        setContentController()
+        setContentController(scrollDirection: .horizontal)
         viewModel.delegate = self
         viewModel.setTextSize(size: visibleTextAreaSize)
         setupNovelCenterMenuView()
@@ -37,7 +41,7 @@ class ReadNovelViewController: NovelContentViewController {
     
     override func viewWillAppear(_: Bool) {
         viewModel.loadDefaultPage()
-        setPabeLabel()
+        setPageLabel()
     }
     
     // MARK: - UICollectionViewDataSource
@@ -68,6 +72,7 @@ class ReadNovelViewController: NovelContentViewController {
 
             cell.centerControlAction = { [weak self] in
                 guard let self = self else { return }
+                self.setPageSlider()
                 self.novelCenterMenuView.isHidden = false
             }
         }
@@ -88,7 +93,7 @@ class ReadNovelViewController: NovelContentViewController {
             viewModel.loadPrevPage()
         }
         
-        setPabeLabel()
+        setPageLabel()
     }
 
     override func nextPageAction(collectionView _: UICollectionView, indexPath _: IndexPath) {
@@ -99,19 +104,20 @@ class ReadNovelViewController: NovelContentViewController {
             viewModel.loadNextChapter()
         }
         
-        setPabeLabel()
+        setPageLabel()
     }
     
     //滑動時，設定頁數
     override func didScrollPage(currentPage: Int) {
         super.didScrollPage(currentPage: currentPage)
         viewModel.setPageIndex(currentIndex: currentPage)
-        setPabeLabel()
+        setPageLabel()
     }
 }
 
 //MARK: - Private Methods
 private extension ReadNovelViewController {
+    
     func setupNovelCenterMenuView() {
         view.addSubview(novelCenterMenuView)
         novelCenterMenuView.translatesAutoresizingMaskIntoConstraints = false
@@ -122,6 +128,7 @@ private extension ReadNovelViewController {
             novelCenterMenuView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
         ])
         
+        novelCenterMenuView.setScrollDirectionStyle(scrollDirection: viewModel.scrollDirection)
         novelCenterMenuView.isHidden = true
         novelCenterMenuView.setFontButtonSelectedStyle(tag: 1)
         novelCenterMenuView.baseCoverButton.addTarget(self, action: #selector(displayNovelCenterMenuViewAction), for: .touchUpInside)
@@ -130,8 +137,38 @@ private extension ReadNovelViewController {
         novelCenterMenuView.brightnessSlider.addTarget(self, action: #selector(setBrightnessAction(sender:)), for: .valueChanged)
         
         novelCenterMenuView.fontSizeButtons.forEach { $0.addTarget(self, action: #selector(setFontSizeAction(sender:)), for: .touchUpInside)}
+        
+        novelCenterMenuView.horizontalScrollButton.addTarget(self, action: #selector(changeScrollDirectionAciton(sender:)), for: .touchUpInside)
+        novelCenterMenuView.verticalScrollButton.addTarget(self, action: #selector(changeScrollDirectionAciton(sender:)), for: .touchUpInside)
+        
+        novelCenterMenuView.brightnessSlider.addTarget(self, action: #selector(brightnessSliderAction(sender:)), for: .touchUpInside)
+        novelCenterMenuView.pageSlider.addTarget(self, action: #selector(pageSliderAction(sender:)), for: .touchUpInside)
+        
+        novelCenterMenuView.brightnessSlider.value = Float(UIScreen.main.brightness)
     }
     
+    //Brightness only work in real device
+    @objc func brightnessSliderAction(sender: UISlider) {
+        UIScreen.main.brightness = CGFloat(sender.value)
+    }
+    
+    @objc func pageSliderAction(sender: UISlider) {
+        let page = round(sender.value)
+        sender.value = page
+        viewModel.currentIndex = Int(page)
+        scrollToItem(row: viewModel.currentIndex, animated: true)
+    }
+    
+    //設定內文捲動方式
+    @objc func changeScrollDirectionAciton(sender: UIButton) {
+        let scrollDirection: UICollectionView.ScrollDirection = sender.tag == 0 ? .horizontal:.vertical
+        novelCenterMenuView.setScrollDirectionStyle(scrollDirection: scrollDirection)
+        viewModel.scrollDirection = scrollDirection
+        contentCollectionView?.removeFromSuperview()
+        setContentController(scrollDirection: scrollDirection)
+    }
+    
+    //關閉控制選單
     @objc func displayNovelCenterMenuViewAction() {
         novelCenterMenuView.isHidden = !novelCenterMenuView.isHidden
     }
@@ -140,9 +177,9 @@ private extension ReadNovelViewController {
         UIScreen.main.brightness = CGFloat(sender.value)
     }
     
-    func setContentController() {
+    func setContentController(scrollDirection: UICollectionView.ScrollDirection) {
         let frame = CGRect(x: 0, y: statusbarHeight, width: view.frame.size.width, height: view.frame.size.height - statusbarHeight - 44)
-        initContentCollection(frame: frame, scrollDirection: .horizontal)
+        initContentCollection(frame: frame, scrollDirection: scrollDirection)
     }
     
     func initPageLabel() {
@@ -154,7 +191,7 @@ private extension ReadNovelViewController {
         view.addSubview(pageLabel)
     }
     
-    func setPabeLabel() {
+    func setPageLabel() {
         guard let pageItem = viewModel.getCurrentPageItem() else {
             return
         }
@@ -165,6 +202,12 @@ private extension ReadNovelViewController {
     
     //設定內文字體
     @objc func setFontSizeAction(sender: UIButton) {
+
+        let total = Double(viewModel.getTotalPage())
+        let current = Double(viewModel.currentIndex+1)
+        //改變字體大小前的閱讀比例
+        let originPercent = current/total
+
         switch sender.tag {
         case 0:
             viewModel.setFontSize(newFontSize: 18.0)
@@ -177,6 +220,20 @@ private extension ReadNovelViewController {
         }
         
         novelCenterMenuView.setFontButtonSelectedStyle(tag: sender.tag)
+        displayNovelCenterMenuViewAction()
+        
+        let afterTotal = Double(viewModel.getTotalPage())
+        viewModel.currentIndex = Int(round(afterTotal*originPercent))-1
+        scrollToItem(row: viewModel.currentIndex, animated: false)
+        setPageLabel()
+        
+    }
+    
+    //設定頁數滑桿數字
+    func setPageSlider() {
+        novelCenterMenuView.pageSlider.minimumValue = 0
+        novelCenterMenuView.pageSlider.maximumValue = Float(viewModel.getTotalPage()-1)
+        novelCenterMenuView.pageSlider.value = Float(viewModel.currentIndex)
     }
 }
 

@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import UIKit
 
 // MARK: - ReadNovelViewModel
 
@@ -15,6 +16,7 @@ class ReadNovelViewModel {
     weak var delegate: ReadNovelDelegate?
     var lineSpacing: CGFloat = 15.0
     var fontSize: CGFloat = 15.0
+    var scrollDirection: UICollectionView.ScrollDirection = .horizontal
     
     //MARK: - Private Properties
     private(set) var contentArray: [PageItem] = []

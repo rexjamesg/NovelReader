@@ -152,13 +152,13 @@ class NovelContentViewController: UIViewController, UIScrollViewDelegate {
                 }
             } else {
                 //判斷完整換頁
-                if (Double(currentPage)*10).truncatingRemainder(dividingBy: 2.0) == 1 {
+                if (Double(currentPage)*10).truncatingRemainder(dividingBy: 2.0) >= 1 {
                     didChangePage = true
                 } else {
                     didChangePage = false
                 }
             }
-                        
+                                    
             if didChangePage {
                 changePageAction()
             }
